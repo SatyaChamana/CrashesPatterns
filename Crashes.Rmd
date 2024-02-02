@@ -1,0 +1,76 @@
+---
+title: "Plane Crashes"
+author: "Venkata Satyanayana Chamana"
+date: "2023-11-06"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+library(readxl)
+library(tidyverse)
+library(writexl)
+library(lubridate)
+library(hms)
+library(tm)
+library(wordcloud)
+```
+
+```{r}
+crashes <- read_excel("Plane Crashes.xlsx")
+crashes
+```
+```{r}
+crashes1960 <- crashes %>% filter(year(Date) >= 1960)
+
+crashes1960$Age_of_Flight <- year(crashes1960$Date) - crashes1960$YOM 
+
+crashes1960 <- crashes1960 %>% filter(YOM > 1900)
+
+crashes1960 <- crashes1960 %>% filter(Age_of_Flight < 200 & Age_of_Flight >= 0)
+
+crashes1960
+```
+
+```{r}
+crashes1960$Survival_Rate <- round((1 - (crashes1960$`Total fatalities`/ (crashes1960$`Crew on board` + crashes1960$`Pax on board` + crashes1960$`Other fatalities`))) * 100,2)
+
+crashes1960$Fatality_Rate <- round(((crashes1960$`Total fatalities`/ (crashes1960$`Crew on board` + crashes1960$`Pax on board` + crashes1960$`Other fatalities`))) * 100,2)
+
+crashes1960$Survival_Rate <- as.numeric(crashes1960$Survival_Rate)
+crashes1960$Fatality_Rate <- as.numeric(crashes1960$Fatality_Rate)
+
+crashes1960
+```
+```{r}
+crashes1960$Time_String <- gsub("H|M.*", "", crashes1960$Time)
+crashes1960$Time_String <- gsub(" ", ":", crashes1960$Time_String)
+```
+```{r}
+
+```
+
+
+
+```{r}
+write_xlsx(crashes1960, "Crashes.xlsx")
+```
+
+```{r}
+techFail <- crashes1960 %>% filter(`Crash cause` == "Technical failure")
+corpus <- Corpus(VectorSource(techFail[1:50, ]$Circumstances))
+corpus <- tm_map(corpus, content_transformer(tolower))
+corpus <- tm_map(corpus, removePunctuation)
+corpus <- tm_map(corpus, removeWords, stopwords("english"))
+
+tdm <- TermDocumentMatrix(corpus)
+
+m <- as.matrix(tdm)
+words <- sort(rowSums(m), decreasing = TRUE)
+d <- data.frame(word = names(words), freq = words)
+
+wordcloud(words = d$word, freq = d$freq, min.freq = 500, scale = c(2, 0.5), colors = brewer.pal(8, "Dark2"))
+
+```
+
+
